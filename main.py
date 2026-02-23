@@ -21,6 +21,11 @@ def cargar_datos_espaciales():
 df_ivo = cargar_datos()
 df_espacial = cargar_datos_espaciales()
 
+# Inicializamos variables para guardar los gráficos de cara al informe final
+fig_scatter = None
+fig_radar = None
+fig_pitch = None
+
 # 3. Título principal
 st.title("⚽ Modelo IVO: Scouting de Eficiencia")
 
@@ -98,7 +103,6 @@ tab_ranking, tab_comparativa, tab_analisis_avanzado = st.tabs([
     "🔬 Táctica y Espacial"
 ])
 
-
 # ==========================================
 # --- PESTAÑA 1: RANKING Y CUADRANTES ---
 # ==========================================
@@ -126,7 +130,6 @@ with tab_ranking:
 
         if len(df_filtrado) > 0:
             df_plot = df_filtrado.copy()
-
             df_plot[columna_x] = pd.to_numeric(df_plot[columna_x], errors='coerce').fillna(0.0)
             df_plot['IVO_P90'] = pd.to_numeric(df_plot['IVO_P90'], errors='coerce').fillna(0.0)
 
@@ -139,10 +142,8 @@ with tab_ranking:
             if tiene_posicion:
                 df_plot['Posicion'] = df_plot['Posicion'].fillna('Sin definir').astype(str)
                 posiciones = df_plot['Posicion'].unique()
-
                 for pos in posiciones:
                     df_pos = df_plot[df_plot['Posicion'] == pos]
-
                     fig_scatter.add_trace(go.Scatter(
                         x=df_pos[columna_x].tolist(),
                         y=df_pos['IVO_P90'].tolist(),
@@ -205,7 +206,6 @@ with tab_comparativa:
                 'Tiros_P90': 'FINALIZACIÓN',
                 'Presion_Pct': 'RESISTENCIA PRESIÓN'
             }
-
             cat_cols = list(mapeo.keys())
             cat_nombres = list(mapeo.values())
 
@@ -217,7 +217,6 @@ with tab_comparativa:
                 if not d.empty:
                     val_norm = [(d[c].iloc[0] / maximos[c]) * 100 if maximos[c] != 0 else 0 for c in cat_cols]
                     val_norm += [val_norm[0]]
-
                     val_reales = d[cat_cols].values.flatten().tolist()
                     val_reales += [val_reales[0]]
 
@@ -245,7 +244,9 @@ with tab_comparativa:
         col_radar, col_texto = st.columns([1.5, 1])
 
         with col_radar:
-            st.plotly_chart(crear_radar(j1, j2, df_filtrado), use_container_width=True)
+            # Guardamos la figura en la variable para el reporte
+            fig_radar = crear_radar(j1, j2, df_filtrado)
+            st.plotly_chart(fig_radar, use_container_width=True)
 
         with col_texto:
             st.markdown("#### 💡 Insights Automáticos")
@@ -313,7 +314,6 @@ with tab_comparativa:
 
         if j_clon:
             resultados = calcular_similitud_refinada(j_clon, df_filtrado, features_clones)
-
             st.write(f"Análisis de similitud avanzada para **{j_clon}**:")
 
             cols_clones = st.columns(5)
@@ -364,7 +364,6 @@ with tab_analisis_avanzado:
         st.subheader("🏆 XI Ideal (4-3-3)")
         st.caption("Alineación algorítmica (respeta País y Minutos, ignora demarcación actual).")
 
-        # --- CAMBIO CLAVE AQUÍ: Usamos df_base en lugar de df_filtrado para que no se vea afectado por el filtro de Posición
         if 'Posicion' in df_base.columns:
             df_dream = df_base.copy()
 
@@ -416,7 +415,6 @@ with tab_analisis_avanzado:
                 if not ld.empty: st.warning(f"**LD | {ld.iloc[0]['Jugador']}**\n\n🛡️ {ld.iloc[0]['IVO_P90']:.2f}")
         else:
             st.error("⚠️ Falta la columna 'Posicion' para generar el XI Ideal.")
-
 
     with col_heat:
         st.subheader("🔥 Densidad de Intervención")
@@ -492,15 +490,69 @@ with st.container():
         veredicto = st.selectbox("Veredicto Final:", ["🟢 Altamente Recomendado", "🟡 En Seguimiento", "🔴 No se ajusta al perfil", "🔵 Opción Estratégica"], index=1)
         st.info(f"**Análisis de Datos:** El perfil analizado tiene un 85% de compatibilidad con el sistema táctico del equipo.")
 
+# --- FUNCIÓN PARA GENERAR EL REPORTE HTML ---
+def generar_html_informe(notas, veredicto_txt, f_scatter, f_radar, f_pitch):
+    html_content = f"""
+    <html>
+    <head>
+        <meta charset="utf-8">
+        <title>Informe de Scouting - Modelo IVO</title>
+        <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+        <style>
+            body {{ font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin: 40px; background-color: #f4f7f6; color: #333; }}
+            h1 {{ color: #1e3799; text-align: center; border-bottom: 2px solid #1e3799; padding-bottom: 10px; }}
+            h2 {{ color: #2f3640; margin-top: 30px; }}
+            .container {{ background: white; padding: 20px; border-radius: 8px; box-shadow: 0 4px 8px rgba(0,0,0,0.05); margin-bottom: 25px; }}
+            .notes {{ background: #f8efba; padding: 15px; border-left: 5px solid #f39c12; border-radius: 4px; font-size: 16px; line-height: 1.5; }}
+            .verdict {{ font-weight: bold; font-size: 18px; color: #27ae60; background: #e8f8f5; padding: 10px; border-radius: 4px; display: inline-block; }}
+            .footer {{ text-align: center; font-size: 12px; color: #7f8c8d; margin-top: 50px; }}
+        </style>
+    </head>
+    <body>
+        <h1>⚽ Informe Ejecutivo de Scouting - Modelo IVO</h1>
+
+        <div class="container">
+            <h2>📋 Conclusiones y Veredicto</h2>
+            <p class="verdict">Veredicto Final: {veredicto_txt}</p>
+            <div class="notes">
+                <strong>Análisis Táctico:</strong><br><br>
+                {notas if notas else '<em>El analista no ha añadido comentarios adicionales en esta sesión.</em>'}
+            </div>
+        </div>
+    """
+
+    # Extraer el HTML de los gráficos si existen
+    if f_scatter:
+        html_content += f'<div class="container"><h2>📈 Análisis: Riesgo vs Recompensa</h2>{f_scatter.to_html(full_html=False, include_plotlyjs=False)}</div>'
+
+    if f_radar:
+        html_content += f'<div class="container"><h2>⚔️ Comparativa de Perfiles</h2>{f_radar.to_html(full_html=False, include_plotlyjs=False)}</div>'
+
+    if f_pitch:
+        html_content += f'<div class="container"><h2>🔥 Mapa de Calor y Zonas de Influencia</h2>{f_pitch.to_html(full_html=False, include_plotlyjs=False)}</div>'
+
+    html_content += """
+        <div class="footer">
+            Generado automáticamente a través de la plataforma de Scouting IVO.
+        </div>
+    </body>
+    </html>
+    """
+    return html_content
+
+
 col_btn1, col_btn2, col_btn3 = st.columns(3)
+
 with col_btn1:
-    if st.button("💾 Guardar Informe"): st.success("Informe guardado en la base de datos local.")
-with col_btn2:
-    if not df_espacial.empty and 'jugador_calor' in locals():
-        csv_info = df_filtrado[df_filtrado['Jugador'] == jugador_calor].to_csv(index=False).encode('utf-8')
-        st.download_button(label="📥 Descargar Datos (CSV)", data=csv_info, file_name=f'informe_{jugador_calor.replace(" ", "_")}.csv', mime='text/csv')
-with col_btn3:
-    if st.button("📧 Enviar a Dirección Deportiva"): st.warning("Configurando servidor de correo...")
+    # Generamos el HTML combinando los textos y las figuras guardadas
+    html_reporte = generar_html_informe(notas_scout, veredicto, fig_scatter, fig_radar, fig_pitch)
+
+    st.download_button(
+        label="📄 Descargar Informe Completo (HTML)",
+        data=html_reporte.encode('utf-8'),
+        file_name="Informe_Scouting_IVO.html",
+        mime="text/html"
+    )
 
 st.markdown("---")
 st.markdown("<center><small>Dashboard de Scouting Profesional | TFM - Análisis de Datos Qatar 2022</small></center>", unsafe_allow_html=True)
