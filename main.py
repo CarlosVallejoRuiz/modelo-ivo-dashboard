@@ -480,12 +480,12 @@ with tab_analisis_avanzado:
 # 11. CONCLUSIONES Y RECOMENDACIÓN FINAL
 # ==========================================
 st.divider()
-st.subheader("📋 Conclusiones del Analista")
+st.subheader("📋 Conclusiones del analista")
 
 with st.container():
     col_c1, col_c2 = st.columns([2, 1])
     with col_c1:
-        notas_scout = st.text_area("Análisis Táctico:", placeholder="Ejemplo: El jugador demuestra una gran capacidad de asociación...", height=150)
+        notas_scout = st.text_area("Análisis táctico:", placeholder="Ejemplo: El jugador demuestra una gran capacidad de asociación...", height=150)
     with col_c2:
         veredicto = st.selectbox("Veredicto Final:", ["🟢 Altamente recomendado", "🟡 En seguimiento", "🔴 No se ajusta al perfil", "🔵 Opción estratégica"], index=1)
         st.info(f"**Análisis de datos:** El perfil analizado tiene un 85% de compatibilidad con el sistema táctico del equipo.")
@@ -548,7 +548,7 @@ with col_btn1:
     html_reporte = generar_html_informe(notas_scout, veredicto, fig_scatter, fig_radar, fig_pitch)
 
     st.download_button(
-        label="📄 Descargar Informe Completo (HTML)",
+        label="📄 Descargar informe completo (HTML)",
         data=html_reporte.encode('utf-8'),
         file_name="Informe_Scouting_IVO.html",
         mime="text/html"
@@ -556,4 +556,5 @@ with col_btn1:
 
 st.markdown("---")
 st.markdown("<center><small>Dashboard de Scouting Profesional | TFM - Análisis de Datos Qatar 2022</small></center>", unsafe_allow_html=True)
+
 
