@@ -4,7 +4,7 @@ import plotly.graph_objects as go
 import numpy as np
 
 # 1. Configuración de la página
-st.set_page_config(page_title="Scouting IVO Qatar 2022", page_icon="⚽", layout="wide")
+st.set_page_config(page_title="Scouting IVO Catar 2022", page_icon="⚽", layout="wide")
 
 # 2. Cargar datos
 @st.cache_data
@@ -27,23 +27,23 @@ fig_radar = None
 fig_pitch = None
 
 # 3. Título principal
-st.title("⚽ Modelo IVO: Scouting de Eficiencia")
+st.title("⚽ Modelo IVO: scouting de eficiencia")
 
 # ==========================================
 # 4. FILTROS EN LA BARRA LATERAL (GLOBALES)
 # ==========================================
-st.sidebar.header("Filtros de Scouting")
+st.sidebar.header("Filtros de scouting")
 
 # Filtro: Minutos
 minutos_min = st.sidebar.slider("Minutos mínimos", 0, int(df_ivo['Minutos'].max()), 180)
 
 # Filtro: Selección
 lista_equipos = sorted(df_ivo['Seleccion'].unique().tolist())
-equipos_sel = st.sidebar.multiselect("Filtrar por Selección (vacío = todas)", options=lista_equipos, default=[])
+equipos_sel = st.sidebar.multiselect("Filtrar por selección (vacío = todas)", options=lista_equipos, default=[])
 
 # Filtro: Posición
 lista_posiciones = sorted(df_ivo['Posicion'].dropna().unique().tolist()) if 'Posicion' in df_ivo.columns else []
-posiciones_sel = st.sidebar.multiselect("Filtrar por Demarcación (vacío = todas):", options=lista_posiciones, default=[])
+posiciones_sel = st.sidebar.multiselect("Filtrar por demarcación (vacío = todas):", options=lista_posiciones, default=[])
 
 # --- APLICACIÓN EN CASCADA DE TODOS LOS FILTROS ---
 
@@ -66,7 +66,7 @@ col_kpi1, col_kpi2, col_kpi3, col_kpi4 = st.columns(4)
 
 with col_kpi1:
     st.metric(
-        label="Jugadores Filtrados", 
+        label="Jugadores filtrados", 
         value=len(df_filtrado),
         help="Número total de jugadores que cumplen todos los criterios (incluida demarcación)."
     )
@@ -84,13 +84,13 @@ with col_kpi3:
     if not df_filtrado.empty:
         top_player = df_filtrado.iloc[0]['Jugador']
         top_val = df_filtrado.iloc[0]['IVO_P90']
-        st.metric(label="Líder Eficiencia", value=top_player, delta=f"{top_val:.3f} IVO")
+        st.metric(label="Líder eficiencia", value=top_player, delta=f"{top_val:.3f} IVO")
     else:
-        st.metric(label="Líder Eficiencia", value="-")
+        st.metric(label="Líder eficiencia", value="-")
 
 with col_kpi4:
     presion_media = df_filtrado['Presion_Pct'].mean() if 'Presion_Pct' in df_filtrado.columns else 0
-    st.metric(label="Intensidad Media", value=f"{presion_media:.1f}%")
+    st.metric(label="Intensidad media", value=f"{presion_media:.1f}%")
 
 st.divider()
 
