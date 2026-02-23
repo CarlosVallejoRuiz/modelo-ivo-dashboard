@@ -487,8 +487,8 @@ with st.container():
     with col_c1:
         notas_scout = st.text_area("Análisis Táctico:", placeholder="Ejemplo: El jugador demuestra una gran capacidad de asociación...", height=150)
     with col_c2:
-        veredicto = st.selectbox("Veredicto Final:", ["🟢 Altamente Recomendado", "🟡 En Seguimiento", "🔴 No se ajusta al perfil", "🔵 Opción Estratégica"], index=1)
-        st.info(f"**Análisis de Datos:** El perfil analizado tiene un 85% de compatibilidad con el sistema táctico del equipo.")
+        veredicto = st.selectbox("Veredicto Final:", ["🟢 Altamente recomendado", "🟡 En seguimiento", "🔴 No se ajusta al perfil", "🔵 Opción estratégica"], index=1)
+        st.info(f"**Análisis de datos:** El perfil analizado tiene un 85% de compatibilidad con el sistema táctico del equipo.")
 
 # --- FUNCIÓN PARA GENERAR EL REPORTE HTML ---
 def generar_html_informe(notas, veredicto_txt, f_scatter, f_radar, f_pitch):
@@ -496,7 +496,7 @@ def generar_html_informe(notas, veredicto_txt, f_scatter, f_radar, f_pitch):
     <html>
     <head>
         <meta charset="utf-8">
-        <title>Informe de Scouting - Modelo IVO</title>
+        <title>Informe de scouting - Modelo IVO</title>
         <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
         <style>
             body {{ font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin: 40px; background-color: #f4f7f6; color: #333; }}
@@ -509,13 +509,13 @@ def generar_html_informe(notas, veredicto_txt, f_scatter, f_radar, f_pitch):
         </style>
     </head>
     <body>
-        <h1>⚽ Informe Ejecutivo de Scouting - Modelo IVO</h1>
+        <h1>⚽ Informe ejecutivo de scouting - Modelo IVO</h1>
 
         <div class="container">
-            <h2>📋 Conclusiones y Veredicto</h2>
-            <p class="verdict">Veredicto Final: {veredicto_txt}</p>
+            <h2>📋 Conclusiones y veredicto</h2>
+            <p class="verdict">Veredicto final: {veredicto_txt}</p>
             <div class="notes">
-                <strong>Análisis Táctico:</strong><br><br>
+                <strong>Análisis táctico:</strong><br><br>
                 {notas if notas else '<em>El analista no ha añadido comentarios adicionales en esta sesión.</em>'}
             </div>
         </div>
@@ -556,3 +556,4 @@ with col_btn1:
 
 st.markdown("---")
 st.markdown("<center><small>Dashboard de Scouting Profesional | TFM - Análisis de Datos Qatar 2022</small></center>", unsafe_allow_html=True)
+
