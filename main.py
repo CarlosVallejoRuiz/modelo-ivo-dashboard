@@ -7,7 +7,7 @@ import numpy as np
 st.set_page_config(page_title="Scouting IVO Catar 2022", page_icon="⚽", layout="wide")
 
 # 2. Cargar datos
-@st.cache_data
+# @st.cache_data
 def cargar_datos():
     return pd.read_csv("qatar2022_ivo_dashboard.csv")
 
@@ -556,5 +556,6 @@ with col_btn1:
 
 st.markdown("---")
 st.markdown("<center><small>Dashboard de Scouting Profesional | TFM - Análisis de Datos Qatar 2022</small></center>", unsafe_allow_html=True)
+
 
 
