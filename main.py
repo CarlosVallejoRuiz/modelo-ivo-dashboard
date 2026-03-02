@@ -272,50 +272,66 @@ with tab_comparativa:
 
     st.divider()
 
-    # 7. BUSCADOR DE CLONES 
-    st.subheader("🔍 Buscador de Clones: Smart Scouting")
-    st.markdown("Encuentra los perfiles más similares dentro de los jugadores filtrados actualmente.")
+# 7. BUSCADOR DE CLONES 
+st.subheader("🔍 Buscador de Clones: Smart Scouting")
+st.markdown("Busca perfiles similares en **todo el torneo**. El algoritmo ignora el filtro de país para encontrar jugadores en la misma demarcación.")
 
-    banderas = {
-        "Spain": "es", "Cameroon": "cm", "Canada": "ca", "Argentina": "ar", 
-        "Brazil": "br", "France": "fr", "Germany": "de", "Portugal": "pt",
-        "Morocco": "ma", "Japan": "jp", "South Korea": "kr", "Australia": "au",
-        "Netherlands": "nl", "England": "gb", "Croatia": "hr", "Senegal": "sn",
-        "USA": "us", "Mexico": "mx", "Poland": "pl", "Belgium": "be",
-        "Switzerland": "ch", "Ghana": "gh", "Uruguay": "uy", "Qatar": "qa",
-        "Serbia": "rs", "Tunisia": "tn", "Saudi Arabia": "sa", "Denmark": "dk",
-        "Costa Rica": "cr", "Ecuador": "ec", "Wales": "gb-wls", "Iran": "ir"
-    }
+banderas = {
+    "Spain": "es", "Cameroon": "cm", "Canada": "ca", "Argentina": "ar", 
+    "Brazil": "br", "France": "fr", "Germany": "de", "Portugal": "pt",
+    "Morocco": "ma", "Japan": "jp", "South Korea": "kr", "Australia": "au",
+    "Netherlands": "nl", "England": "gb", "Croatia": "hr", "Senegal": "sn",
+    "USA": "us", "Mexico": "mx", "Poland": "pl", "Belgium": "be",
+    "Switzerland": "ch", "Ghana": "gh", "Uruguay": "uy", "Qatar": "qa",
+    "Serbia": "rs", "Tunisia": "tn", "Saudi Arabia": "sa", "Denmark": "dk",
+    "Costa Rica": "cr", "Ecuador": "ec", "Wales": "gb-wls", "Iran": "ir"
+}
 
-    features_clones = ['IVO_P90', 'Pases_P90', 'Conducciones_P90', 'Regates_P90', 'Tiros_P90', 'Presion_Pct']
+features_clones = ['IVO_P90', 'Pases_P90', 'Conducciones_P90', 'Regates_P90', 'Tiros_P90', 'Presion_Pct']
 
-    if len(opciones_radar) > 1:
-        j_clon = st.selectbox("Buscar parecidos a:", opciones_radar, key="clon_selector")
+# Cambiamos a > 0. Solo necesitas 1 jugador en tu filtro para buscarle clones en el resto del mundo
+if len(opciones_radar) > 0: 
+    j_clon = st.selectbox("Buscar parecidos a:", opciones_radar, key="clon_selector")
 
-        def calcular_similitud_refinada(nombre_referencia, df, lista_features):
-            pesos = {'IVO_P90': 0.35, 'Presion_Pct': 0.20, 'Regates_P90': 0.15, 'Tiros_P90': 0.10, 'Pases_P90': 0.10, 'Conducciones_P90': 0.10}
-            df_norm = df.copy()
-            for col in lista_features:
-                if df[col].max() != df[col].min():
-                    df_norm[col] = (df[col] - df[col].min()) / (df[col].max() - df[col].min())
-                    df_norm[col] = df_norm[col] * pesos[col]
-                else:
-                    df_norm[col] = 0
+    def calcular_similitud_global(nombre_referencia, df_total, lista_features, min_mins):
+        # 1. Extraemos la posición exacta del jugador de referencia desde la base total
+        pos_referencia = df_total[df_total['Jugador'] == nombre_referencia]['Posicion'].iloc[0]
 
-            val_ref = df_norm[df_norm['Jugador'] == nombre_referencia][lista_features].values
-            val_todos = df_norm[lista_features].values
+        # 2. Creamos un "Pool" de búsqueda GLOBAL: Misma posición + Minutos mínimos (IGNORA EL PAÍS)
+        df_pool = df_total[(df_total['Posicion'] == pos_referencia) & (df_total['Minutos'] >= min_mins)].copy()
 
-            distancias = np.linalg.norm(val_todos - val_ref, axis=1)
-            similitud = np.exp(-distancias * 5) * 100 
+        # 3. Aplicar los pesos y normalizar solo contra los rivales de su misma posición
+        pesos = {'IVO_P90': 0.35, 'Presion_Pct': 0.20, 'Regates_P90': 0.15, 'Tiros_P90': 0.10, 'Pases_P90': 0.10, 'Conducciones_P90': 0.10}
+        df_norm = df_pool.copy()
 
-            df_res = df.copy()
-            df_res['Similitud'] = similitud
-            return df_res[df_res['Jugador'] != nombre_referencia].sort_values(by='Similitud', ascending=False).head(5)
+        for col in lista_features:
+            if df_pool[col].max() != df_pool[col].min():
+                df_norm[col] = (df_pool[col] - df_pool[col].min()) / (df_pool[col].max() - df_pool[col].min())
+                df_norm[col] = df_norm[col] * pesos[col]
+            else:
+                df_norm[col] = 0
 
-        if j_clon:
-            resultados = calcular_similitud_refinada(j_clon, df_filtrado, features_clones)
-            st.write(f"Análisis de similitud avanzada para **{j_clon}**:")
+        # 4. Calcular Distancia Euclidiana
+        val_ref = df_norm[df_norm['Jugador'] == nombre_referencia][lista_features].values
+        val_todos = df_norm[lista_features].values
 
+        distancias = np.linalg.norm(val_todos - val_ref, axis=1)
+        similitud = np.exp(-distancias * 5) * 100 
+
+        df_res = df_pool.copy()
+        df_res['Similitud'] = similitud
+
+        # Devolver los 5 más parecidos (excluyendo al propio jugador de referencia)
+        df_final = df_res[df_res['Jugador'] != nombre_referencia].sort_values(by='Similitud', ascending=False).head(5)
+
+        return df_final, pos_referencia, df_pool
+
+    if j_clon:
+        resultados, posicion_clon, df_pool_usado = calcular_similitud_global(j_clon, df_ivo, features_clones, minutos_min)
+
+        st.write(f"Buscando en todo el torneo clones de **{j_clon}** (Demarcación: **{posicion_clon}**):")
+
+        if len(resultados) > 0:
             cols_clones = st.columns(5)
             for i, (index, row) in enumerate(resultados.iterrows()):
                 with cols_clones[i]:
@@ -327,13 +343,17 @@ with tab_comparativa:
                     st.metric("Similitud", f"{row['Similitud']:.1f}%")
 
             st.write("---")
-            st.subheader(f"📊 Tabla Comparativa: {j_clon} vs Clones")
+            st.subheader(f"📊 Tabla Comparativa Global ({posicion_clon})")
 
-            df_original = df_filtrado[df_filtrado['Jugador'] == j_clon].copy()
+            # Cogemos los datos originales del jugador de referencia desde el pool global
+            df_original = df_pool_usado[df_pool_usado['Jugador'] == j_clon].copy()
             df_original['Similitud'] = 100.0 
 
             tabla_comp = pd.concat([df_original, resultados])
-            columnas_tabla = ['Jugador', 'Seleccion', 'Similitud'] + features_clones
+
+            columnas_tabla = ['Jugador', 'Seleccion', 'Posicion', 'Similitud'] + features_clones
+            columnas_tabla = [col for col in columnas_tabla if col in tabla_comp.columns]
+
             df_mostrar = tabla_comp[columnas_tabla].reset_index(drop=True)
 
             def resaltar_referencia(x):
@@ -348,8 +368,10 @@ with tab_comparativa:
                 }).apply(resaltar_referencia, axis=None),
                 use_container_width=True
             )
-    else:
-        st.info("No hay suficientes jugadores filtrados para buscar clones.")
+        else:
+            st.warning(f"No hay suficientes jugadores en la posición **{posicion_clon}** en todo el torneo con los minutos mínimos exigidos.")
+else:
+    st.info("Selecciona al menos a un jugador en los filtros para buscarle clones.")
 
 
 # ==========================================
@@ -480,15 +502,15 @@ with tab_analisis_avanzado:
 # 11. CONCLUSIONES Y RECOMENDACIÓN FINAL
 # ==========================================
 st.divider()
-st.subheader("📋 Conclusiones del analista")
+st.subheader("📋 Conclusiones del Analista")
 
 with st.container():
     col_c1, col_c2 = st.columns([2, 1])
     with col_c1:
-        notas_scout = st.text_area("Análisis táctico:", placeholder="Ejemplo: El jugador demuestra una gran capacidad de asociación...", height=150)
+        notas_scout = st.text_area("Análisis Táctico:", placeholder="Ejemplo: El jugador demuestra una gran capacidad de asociación...", height=150)
     with col_c2:
-        veredicto = st.selectbox("Veredicto Final:", ["🟢 Altamente recomendado", "🟡 En seguimiento", "🔴 No se ajusta al perfil", "🔵 Opción estratégica"], index=1)
-        st.info(f"**Análisis de datos:** El perfil analizado tiene un 85% de compatibilidad con el sistema táctico del equipo.")
+        veredicto = st.selectbox("Veredicto Final:", ["🟢 Altamente Recomendado", "🟡 En Seguimiento", "🔴 No se ajusta al perfil", "🔵 Opción Estratégica"], index=1)
+        st.info(f"**Análisis de Datos:** El perfil analizado tiene un 85% de compatibilidad con el sistema táctico del equipo.")
 
 # --- FUNCIÓN PARA GENERAR EL REPORTE HTML ---
 def generar_html_informe(notas, veredicto_txt, f_scatter, f_radar, f_pitch):
@@ -496,7 +518,7 @@ def generar_html_informe(notas, veredicto_txt, f_scatter, f_radar, f_pitch):
     <html>
     <head>
         <meta charset="utf-8">
-        <title>Informe de scouting - Modelo IVO</title>
+        <title>Informe de Scouting - Modelo IVO</title>
         <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
         <style>
             body {{ font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin: 40px; background-color: #f4f7f6; color: #333; }}
@@ -509,13 +531,13 @@ def generar_html_informe(notas, veredicto_txt, f_scatter, f_radar, f_pitch):
         </style>
     </head>
     <body>
-        <h1>⚽ Informe ejecutivo de scouting - Modelo IVO</h1>
+        <h1>⚽ Informe Ejecutivo de Scouting - Modelo IVO</h1>
 
         <div class="container">
-            <h2>📋 Conclusiones y veredicto</h2>
-            <p class="verdict">Veredicto final: {veredicto_txt}</p>
+            <h2>📋 Conclusiones y Veredicto</h2>
+            <p class="verdict">Veredicto Final: {veredicto_txt}</p>
             <div class="notes">
-                <strong>Análisis táctico:</strong><br><br>
+                <strong>Análisis Táctico:</strong><br><br>
                 {notas if notas else '<em>El analista no ha añadido comentarios adicionales en esta sesión.</em>'}
             </div>
         </div>
@@ -548,7 +570,7 @@ with col_btn1:
     html_reporte = generar_html_informe(notas_scout, veredicto, fig_scatter, fig_radar, fig_pitch)
 
     st.download_button(
-        label="📄 Descargar informe completo (HTML)",
+        label="📄 Descargar Informe Completo (HTML)",
         data=html_reporte.encode('utf-8'),
         file_name="Informe_Scouting_IVO.html",
         mime="text/html"
@@ -556,7 +578,3 @@ with col_btn1:
 
 st.markdown("---")
 st.markdown("<center><small>Dashboard de Scouting Profesional | TFM - Análisis de Datos Qatar 2022</small></center>", unsafe_allow_html=True)
-
-
-
-
